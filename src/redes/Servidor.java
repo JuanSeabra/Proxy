@@ -29,12 +29,13 @@ public class Servidor {
 			while(true) {
 				//Aguarda ate que um cliente se conecte e estabeleca conexao na porta
 				Socket clientSocket = serverSocket.accept();  
-
+				
+				//Streams de destino e fonte referentes ao cliente conectado
 				PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);                   
 				BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
 				String inputLine;
-				List<String> linhas = new ArrayList<String>();
+				List<String> linhas = new ArrayList<>();
 				
 				String[] campos;
 				while ((inputLine = in.readLine()) != null) { 
@@ -73,21 +74,21 @@ public class Servidor {
 					
 					InputStream resposta = socket.getInputStream();
 					ByteArrayOutputStream saida = new ByteArrayOutputStream();
-					byte[] buffer = new byte[1024];
-					int n = 0;
+					byte[] buffer = new byte[1048576];
+					int n;
 					
 					while(-1 != (n = resposta.read(buffer))) {
-						saida.write(buffer, 0, n);					
-					}
-					
-					saida.close();
+						saida.write(buffer);							
+					}				
 					
 					byte[] dados = saida.toByteArray();
-					resp.write(dados);					
-					 
+					resp.write(dados);
+					
+					saida.close();
+					resposta.close();
+					resp.close();					 
 					socket.close();
-
-					clientSocket.close();                   
+					clientSocket.close();        
 				}
 				catch (MalformedURLException e) {
 					out.println("URL mal formatada!");
