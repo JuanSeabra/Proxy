@@ -1,6 +1,10 @@
 package redes;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,6 +15,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import sun.misc.IOUtils;
+import sun.nio.ch.IOUtil;
 
 public class Servidor {
 
@@ -51,13 +58,9 @@ public class Servidor {
 
 				if (!campos[1].contains("http://")) {
 					campos[1] = "http://" + campos[1];
-				}						
+				}			
 
-				String metodo = campos[0];
-				String end = campos[1];
-				String versao = campos[2];             
-
-				URL url = new URL(end);  
+				URL url = new URL(campos[1]);  
 				try {              	
 					
 					Socket socket = new Socket(url.getHost(), 80);
@@ -69,12 +72,30 @@ public class Servidor {
 					writer.println("");
 					writer.flush();
 
-					BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+					/*BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));					
+					
 					for (String line; (line = reader.readLine()) != null;) {                          
 						out.println(line);
 						System.out.println(line);
 					}
-					out.flush();  
+					
+					out.flush();*/
+					DataOutputStream resp = new DataOutputStream(clientSocket.getOutputStream());
+					
+					InputStream resposta = socket.getInputStream();
+					ByteArrayOutputStream saida = new ByteArrayOutputStream();
+					byte[] buffer = new byte[1024];
+					int n = 0;
+					
+					while(-1 != (n = resposta.read(buffer))) {
+						saida.write(buffer, 0, n);					
+					}
+					
+					saida.close();
+					
+					byte[] dados = saida.toByteArray();
+					resp.write(dados);					
+					 
 					socket.close();
 
 					clientSocket.close();                   
