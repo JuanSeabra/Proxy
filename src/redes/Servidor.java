@@ -56,7 +56,7 @@ public class Servidor {
  
 				campos = linhas.get(0).split(" ");		
 
-				if (!campos[1].contains("http://")) {
+				if (!campos[1].contains("http")) {
 					campos[1] = "http://" + campos[1];
 				}			
 
