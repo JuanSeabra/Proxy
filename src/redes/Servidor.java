@@ -11,9 +11,11 @@ import java.util.List;
 public class Servidor {
 	
 	public int porta;
+	public String arquivo; //buffer para ler o arquivo
 	
-	public Servidor(int porta) {
+	public Servidor(int porta, String arquivo) {
 		this.porta = porta;
+		this.arquivo = arquivo;
 	}
 	
 	public List<String> getLinhasRequisicao(BufferedReader in) {
@@ -42,7 +44,7 @@ public class Servidor {
 		writer.flush();
 	}
 	
-	public void repassarResposta(DataOutputStream resp, InputStream resposta, ByteArrayOutputStream saida ) throws IOException {
+	public byte[] repassarResposta(InputStream resposta, ByteArrayOutputStream saida ) throws IOException {
 		byte[] buffer = new byte[16384];
 		int n;		
 		
@@ -52,7 +54,7 @@ public class Servidor {
 			}	
 			
 			byte[] dados = saida.toByteArray();
-			resp.write(dados);
+			return dados;
 		}
 		catch (IOException e) {
 			throw new IOException();
@@ -132,7 +134,19 @@ public class Servidor {
 					
 					
 					//this.acessoProibido(resposta, out);			
-					this.repassarResposta(resp, resposta, saida);
+					byte[] dados = this.repassarResposta(resposta, saida);
+					String conteudoResp = new String(dados);
+					//System.out.println(conteudoResp);
+					
+					VerificaStrings verificador = new VerificaStrings(conteudoResp, this.arquivo);				
+					
+					//validar conteudo
+					if (verificador.paginaContemBadWord()) {
+						this.acessoProibido(resposta, out);
+					}
+					else {
+						resp.write(dados);
+					}				
 					
 					//Encerra os streams
 					saida.close();

@@ -11,29 +11,31 @@ import java.io.IOException;
  */
 public class VerificaStrings {
     String pagina; // texto página html
+    BufferedReader in;
 
-    VerificaStrings(String pagina){
+    VerificaStrings(String pagina, String arquivo){
         this.pagina = pagina;
+        try {
+			this.in = new BufferedReader(new FileReader(arquivo));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
     }
     //retorna se a página html contem ou não badwords
     public boolean paginaContemBadWord(){
-        String linha; //linha arquivo badwords
-        try {
-            BufferedReader in = new BufferedReader(new FileReader("a"));// lê arquivo de badwords
-            while ((linha = in.readLine()) != null){
-                String[] badWords = linha.split(" ");
-                for (int i = 0; i < badWords.length; i++){
-                    if (pagina.contains(badWords[i])){
-                        return true;
-                    }
-                }
-            }
+        String linha; //linha arquivo badwords        
+        try { 
+            for (String line; (line = in.readLine()) != null;) {                                   	
+                if (pagina.contains(line)){
+                   return true;
+                }                
+        	}
+            
         } catch (FileNotFoundException e){
             e.getMessage();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-
+        }   
         return false;
     }
 }
