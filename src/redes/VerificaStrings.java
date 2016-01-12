@@ -15,7 +15,7 @@ public class VerificaStrings {
     VerificaStrings(String pagina){
         this.pagina = pagina;
     }
-    //retorna se a página html deve ou não ser retornada para o cliente
+    //retorna se a página html contem ou não badwords
     public boolean paginaContemBadWord(){
         String linha; //linha arquivo badwords
         try {

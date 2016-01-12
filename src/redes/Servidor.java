@@ -59,14 +59,12 @@ public class Servidor {
 		}		
 	}
 	
-	public void acessoProibido(InputStream resposta, PrintWriter out) {
-		String line = "HTTP 403 Forbidden";               
-		out.println(line);
-		System.out.println(line);		
+	public void acessoProibido(InputStream resposta, PrintWriter out) {		    		
+		out.write("HTTP/1.0 403 Forbidden\r\n");
+        out.write("Connection: close\r\n");
+        out.write("\r\n");			
 		out.flush();
 	}
-	
-	
 
 	public void executaServidor() throws IOException {		
 		
@@ -133,13 +131,14 @@ public class Servidor {
 					ByteArrayOutputStream saida = new ByteArrayOutputStream();
 					
 					
-					this.acessoProibido(resposta, out);			
-					//this.repassarResposta(resp, resposta, saida);
+					//this.acessoProibido(resposta, out);			
+					this.repassarResposta(resp, resposta, saida);
 					
 					//Encerra os streams
 					saida.close();
 					resposta.close();
 					resp.close();
+					out.close();
 					
 					//Encerra os sockets
 					socket.close();
