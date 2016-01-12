@@ -12,10 +12,17 @@ public class Servidor {
 	
 	public int porta;
 	public String arquivo; //buffer para ler o arquivo
+	public boolean firewall;
 	
-	public Servidor(int porta, String arquivo) {
+	public Servidor(int porta, boolean firewall) {
+		this.porta = porta;
+		this.firewall = firewall;
+	}
+	
+	public Servidor(int porta, String arquivo, boolean firewall) {
 		this.porta = porta;
 		this.arquivo = arquivo;
+		this.firewall = firewall;
 	}
 	
 	public List<String> getLinhasRequisicao(BufferedReader in) {
@@ -42,23 +49,6 @@ public class Servidor {
 		}					
 		writer.println("");
 		writer.flush();
-	}
-	
-	public byte[] repassarResposta(InputStream resposta, ByteArrayOutputStream saida ) throws IOException {
-		byte[] buffer = new byte[16384];
-		int n;		
-		
-		try {
-			while(-1 != (n = resposta.read(buffer))) {
-				saida.write(buffer);							
-			}	
-			
-			byte[] dados = saida.toByteArray();
-			return dados;
-		}
-		catch (IOException e) {
-			throw new IOException();
-		}		
 	}
 	
 	public void acessoProibido(InputStream resposta, PrintWriter out) {		    		
@@ -89,9 +79,21 @@ public class Servidor {
 				
 				//Aqui serao armazenadas a linha da requisicao enviada pelo servidor				
 				List<String> linhas = new ArrayList<>();
+				//Este vetor armazena os campos da primeira linha da requisicao
+				//Os campos sao, em ordem: metodo, URL e versao HTTP
+				String[] campos; 
+				String endereco = new String();
 				
 				try {
-					linhas = this.getLinhasRequisicao(in);
+					linhas = this.getLinhasRequisicao(in);				
+					campos = linhas.get(0).split(" ");
+					//verifica se a URL contem o protocolo HTTP
+					//senao, adiciona-o a ela
+					if (!campos[1].contains("http")) {
+						campos[1] = "http://" + campos[1];
+					}	
+					
+					endereco = campos[1];
 				}
 				//caso ocorra uma excecao, fecha a conexao com o cliente
 				catch (ArrayIndexOutOfBoundsException e) {					
@@ -99,21 +101,10 @@ public class Servidor {
 				}
 				catch (NullPointerException e) {
 					clientSocket.close();
-				}
-				
-				//Este vetor armazena os campos da primeira linha da requisicao
-				//Os campos sao, em ordem: metodo, URL e versao HTTP
-				String[] campos; 
-				campos = linhas.get(0).split(" ");		
-				
-				//verifica se a URL contem o protocolo HTTP
-				//senao, adiciona-o a ela
-				if (!campos[1].contains("http")) {
-					campos[1] = "http://" + campos[1];
-				}			
+				}										
 				
 				//cria um objeto URL a partir da String obtida no vetor anterior 
-				URL url = new URL(campos[1]);  
+				URL url = new URL(endereco);  
 				
 				//A seguir, a conexao do proxy com o host desejado eh feita
 				try {              	
@@ -122,7 +113,8 @@ public class Servidor {
 					Socket socket = new Socket(url.getHost(), 80);
 					
 					//Stream responsavel por preparar a requisicao HTTP feita ao proxy e envia-la ao server
-					PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));					
+					PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));	
+					System.out.println("Requisição recebida:\n");
 					this.enviarRequisicao(writer, linhas);					
 					
 					//Aqui, a resposta do server sera repassada ao cliente do proxy
@@ -130,43 +122,61 @@ public class Servidor {
 					//Streams auxiliares para a formatacao da resposta
 					DataOutputStream resp = new DataOutputStream(clientSocket.getOutputStream());					
 					InputStream resposta = socket.getInputStream();
-					ByteArrayOutputStream saida = new ByteArrayOutputStream();
+					ByteArrayOutputStream saida = new ByteArrayOutputStream();			
+					byte[] buffer = new byte[16384];
+					int n;							
 					
+					while(-1 != (n = resposta.read(buffer))) {
+						saida.write(buffer, 0, n);							
+					}						
 					
-					//this.acessoProibido(resposta, out);			
-					byte[] dados = this.repassarResposta(resposta, saida);
-					String conteudoResp = new String(dados);
-					//System.out.println(conteudoResp);
+					//vetor de bytes contendo a resposta 
+					byte[] dados = saida.toByteArray();			
 					
-					VerificaStrings verificador = new VerificaStrings(conteudoResp, this.arquivo);				
+					System.out.println("\nResposta:\n");
 					
-					//validar conteudo
-					if (verificador.paginaContemBadWord()) {
-						this.acessoProibido(resposta, out);
+					//se o arquivo foi passado por parametro, eh ativada a verificacao de paginas
+					//senao, repassa a resposta normalmente
+					if (firewall) {
+						byte[] data = dados.clone();
+						String conteudoResp = new String(data, "UTF-8");
+						conteudoResp = conteudoResp.toLowerCase();
+						
+						VerificaStrings verificador = new VerificaStrings(conteudoResp, this.arquivo);				
+						
+						//validar conteudo
+						if (verificador.paginaContemBadWord()) {
+							System.out.println("Este endereço possui conteúdo proibido.");
+							this.acessoProibido(resposta, out);
+						}
+						else {
+							System.out.println("Solicitação concluída.");
+							resp.write(dados);
+						}		
 					}
 					else {
-						resp.write(dados);
-					}				
+						System.out.println("Solicitação concluída.");
+						resp.write(dados);						
+					}
 					
 					//Encerra os streams
 					saida.close();
 					resposta.close();
 					resp.close();
 					out.close();
+					in.close();
 					
 					//Encerra os sockets
 					socket.close();
 					clientSocket.close();        
 				}
 				catch (MalformedURLException e) {
-					out.println("URL mal formatada!");
+					System.out.println("URL mal formatada!");
 				}     
 			}
 		} catch (IOException e) {        	
 			System.out.println("Exceção ao tentar ouvir a porta "
 					+ this.porta);
-			System.out.println(e.getMessage());
-			//e.printStackTrace();
 			
 		} finally {
 			try {
@@ -181,15 +191,5 @@ public class Servidor {
 		}
 
 	}
-	
-	//Anotacao - escrevendo como strings
-	/*BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));					
-	
-	for (String line; (line = reader.readLine()) != null;) {                          
-		out.println(line);
-		System.out.println(line);
-	}
-	
-	out.flush();*/
 
 }

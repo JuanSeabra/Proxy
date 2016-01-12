@@ -1,24 +1,32 @@
 package redes;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 
 public class Proxy {
 
 	public static void main(String[] args) {
-		if (args.length != 2) {
-			System.err.println("Uso: java proxy <porta> <arquivo>");
+		if (args.length < 1) {
+			System.err.println("Uso: java proxy <porta> ou proxy <porta> <arquivo>");
 			System.exit(1);
 		}
-		BufferedReader in = null;
+		
+		boolean verificar;
+		
+		if (args.length == 1)
+			verificar = false;
+		else verificar = true;
+		
 		int portNumber = Integer.parseInt(args[0]);		
-		Servidor server = new Servidor(portNumber, args[1]);
+		Servidor server;
+		
+		if (verificar)
+			server = new Servidor(portNumber, args[1], verificar);
+		else server = new Servidor(portNumber, verificar);
+		
 		try {
 			server.executaServidor();
 		} catch (IOException e) {			
-			e.printStackTrace();
+			System.out.println("Ocorreu um erro.");
 		}
 
 	}

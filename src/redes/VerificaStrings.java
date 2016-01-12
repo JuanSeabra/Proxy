@@ -22,8 +22,7 @@ public class VerificaStrings {
 		}
     }
     //retorna se a página html contem ou não badwords
-    public boolean paginaContemBadWord(){
-        String linha; //linha arquivo badwords        
+    public boolean paginaContemBadWord(){   
         try { 
             for (String line; (line = in.readLine()) != null;) {                                   	
                 if (pagina.contains(line)){
